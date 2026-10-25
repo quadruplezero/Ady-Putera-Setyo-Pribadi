@@ -1,6 +1,6 @@
 import { tx } from './db.js';
 import { HttpError } from './http.js';
-import { hashPassword, verifyPassword } from './auth.js';
+import { hashPassword, verifyPassword } from './password.js';
 import { INITIAL_RATING, matchDeltas } from './rating.js';
 
 export const SPORTS = {

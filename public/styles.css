@@ -17,8 +17,9 @@
   color-scheme: light;
 }
 
+/* Ikuti tema sistem; atribut data-theme (bila ada) selalu menang. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0f1412;
     --surface: #171e1b;
     --surface-2: #1f2925;
@@ -36,6 +37,23 @@
     color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+  --bg: #0f1412;
+  --surface: #171e1b;
+  --surface-2: #1f2925;
+  --text: #e8eeeb;
+  --muted: #9aaaa2;
+  --border: #2b3732;
+  --primary: #2dd4bf;
+  --primary-ink: #04201c;
+  --primary-soft: #133a35;
+  --accent: #facc15;
+  --accent-soft: #3a3110;
+  --danger: #f87171;
+  --danger-soft: #3b1a18;
+  --shadow: none;
+  color-scheme: dark;
+}
 
 * { box-sizing: border-box; }
 
@@ -43,23 +61,30 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font: 15px/1.5 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   padding-bottom: calc(72px + env(safe-area-inset-bottom));
 }
 
 a { color: var(--primary); text-decoration: none; }
-h1, h2, h3 { line-height: 1.25; margin: 0 0 8px; }
+h1, h2, h3 { line-height: 1.25; margin: 0 0 8px; text-wrap: balance; }
 h1 { font-size: 1.45rem; }
 h2 { font-size: 1.1rem; margin-top: 24px; }
 p { margin: 0 0 8px; }
 
-.container { max-width: 760px; margin: 0 auto; padding: 16px; }
+.container {
+  max-width: 760px; margin: 0 auto;
+  padding-block: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
 
 /* ---------- navigasi ---------- */
 .topbar {
-  position: sticky; top: 0; z-index: 10;
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px;
+  padding-block: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
   background: color-mix(in srgb, var(--surface) 92%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
@@ -215,6 +240,19 @@ textarea { min-height: 90px; resize: vertical; }
   max-width: calc(100% - 32px);
 }
 #toast.error { background: var(--danger); color: #fff; }
+
+dialog {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text);
+  padding: 20px; width: min(360px, calc(100% - 32px));
+}
+dialog::backdrop { background: rgb(0 0 0 / 45%); }
+dialog p { font-weight: 600; margin-bottom: 16px; }
+dialog .row { justify-content: flex-end; }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}
 
 .skeleton { height: 92px; border-radius: var(--radius); background: var(--surface-2); animation: pulse 1.2s infinite ease-in-out; }
 @keyframes pulse { 50% { opacity: 0.5; } }

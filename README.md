@@ -15,7 +15,7 @@ Aplikasi komunitas olahraga ala **Reclub**: cari sesi *main bareng* di sekitarmu
 
 ## Menjalankan
 
-Butuh **Node.js 22.13+** (memakai `node:sqlite` bawaan — tidak ada dependensi npm).
+Butuh **Node.js 22.13+** (memakai `node:sqlite` bawaan — server tidak butuh dependensi npm).
 
 ```bash
 npm start          # http://localhost:3000
@@ -33,18 +33,25 @@ Masuk dengan akun demo **ady@demo.id / demo1234** (akun lain: budi@, citra@, dew
 | `SEED`          | aktif                 | Set `0` untuk tidak mengisi data contoh      |
 | `COOKIE_SECURE` | nonaktif              | Set `1` di produksi (HTTPS) agar cookie `Secure` |
 
+## Demo tanpa server
+
+`npm run build:demo` menghasilkan `dist/mainbareng-demo.html`: satu file mandiri berisi frontend, backend (rute API yang sama), dan SQLite versi WebAssembly (sql.js). Data disimpan di `localStorage` browser masing-masing pengunjung. Cocok untuk dibagikan atau dicoba tanpa memasang Node.js (butuh `npm install` sekali untuk build).
+
 ## Struktur
 
 ```
 server.js          titik masuk
-src/app.js         server HTTP, rute API, file statis
+src/app.js         server HTTP & file statis
+src/api.js         rute API (dipakai server dan demo browser)
 src/services.js    logika bisnis (sesi, daftar tunggu, klub, skor, peringkat)
 src/rating.js      perhitungan Elo
-src/auth.js        hash sandi (scrypt) & sesi cookie
+src/auth.js        sesi cookie
+src/password.js    hash sandi (scrypt)
 src/db.js          skema SQLite
 src/seed.js        data contoh
 public/            frontend SPA (HTML/CSS/JS tanpa framework)
 test/              tes node:test
+demo/              build demo satu file untuk browser
 ```
 
 ## API ringkas

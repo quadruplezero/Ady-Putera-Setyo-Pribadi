@@ -8,6 +8,9 @@
     <title>MainBareng</title>
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -24,6 +27,14 @@
       <a href="#/leaderboard" data-tab="leaderboard"><span aria-hidden="true">🏆</span>Peringkat</a>
       <a href="#/me" data-tab="me"><span aria-hidden="true">📅</span>Jadwalku</a>
     </nav>
+
+    <dialog id="confirm">
+      <p></p>
+      <div class="row">
+        <button type="button" class="btn secondary" value="cancel">Tidak</button>
+        <button type="button" class="btn danger" value="ok">Ya</button>
+      </div>
+    </dialog>
 
     <div id="toast" role="status" hidden></div>
     <script type="module" src="/app.js"></script>

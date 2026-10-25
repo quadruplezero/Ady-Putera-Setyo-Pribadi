@@ -75,7 +75,7 @@ function sportChips(active) {
 
 function requireLogin() {
   if (state.me) return true;
-  sessionStorage.setItem('afterLogin', location.hash);
+  store.set('afterLogin', location.hash);
   location.hash = '#/login';
   return false;
 }
@@ -106,6 +106,35 @@ async function action(btn, fn) {
     btn.disabled = false;
   }
 }
+
+// Dialog konfirmasi di dalam halaman (window.confirm tidak tersedia di semua tampilan).
+function askConfirm(message, okLabel = 'Ya, lanjutkan') {
+  const dialog = document.getElementById('confirm');
+  dialog.querySelector('p').textContent = message;
+  dialog.querySelector('[value=ok]').textContent = okLabel;
+  dialog.returnValue = '';
+  dialog.querySelectorAll('button').forEach((b) => (b.onclick = () => dialog.close(b.value)));
+  dialog.showModal();
+  return new Promise((resolve) => dialog.addEventListener('close', () => resolve(dialog.returnValue === 'ok'), { once: true }));
+}
+
+const store = {
+  get(key) {
+    try {
+      return sessionStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  set(key, value) {
+    try {
+      if (value == null) sessionStorage.removeItem(key);
+      else sessionStorage.setItem(key, value);
+    } catch {
+      /* penyimpanan diblokir: abaikan */
+    }
+  },
+};
 
 const empty = (msg, cta = '') => `<div class="empty"><p>${msg}</p>${cta}</div>`;
 const loading = () => `<div class="list">${'<div class="skeleton"></div>'.repeat(3)}</div>`;
@@ -311,7 +340,7 @@ async function viewEvent({ id }) {
   );
   document.getElementById('leave')?.addEventListener('click', (ev) =>
     action(ev.currentTarget, async () => {
-      if (!confirm('Yakin batal ikut sesi ini?')) return;
+      if (!(await askConfirm('Yakin batal ikut sesi ini? Slotmu akan diberikan ke pemain di daftar tunggu.', 'Batal ikut'))) return;
       await api(`/events/${id}/leave`, { method: 'POST' });
       toast('Kamu sudah keluar dari sesi.');
       reload();
@@ -319,7 +348,7 @@ async function viewEvent({ id }) {
   );
   document.getElementById('cancel')?.addEventListener('click', (ev) =>
     action(ev.currentTarget, async () => {
-      if (!confirm('Batalkan sesi ini untuk semua pemain?')) return;
+      if (!(await askConfirm('Batalkan sesi ini untuk semua pemain?', 'Batalkan sesi'))) return;
       await api(`/events/${id}/cancel`, { method: 'POST' });
       toast('Sesi dibatalkan.');
       reload();
@@ -328,13 +357,10 @@ async function viewEvent({ id }) {
   document.getElementById('share').addEventListener('click', async () => {
     const url = location.href;
     try {
-      if (navigator.share) await navigator.share({ title: e.title, url });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast('Tautan disalin!');
-      }
+      await navigator.clipboard.writeText(url);
+      toast('Tautan disalin!');
     } catch {
-      /* dibatalkan pengguna */
+      toast(url);
     }
   });
   const form = document.getElementById('match-form');
@@ -481,7 +507,7 @@ async function viewClub({ id }) {
   );
   document.getElementById('leave')?.addEventListener('click', (ev) =>
     action(ev.currentTarget, async () => {
-      if (!confirm('Keluar dari klub ini?')) return;
+      if (!(await askConfirm('Keluar dari klub ini?', 'Keluar klub'))) return;
       await api(`/clubs/${id}/leave`, { method: 'POST' });
       toast('Kamu sudah keluar dari klub.');
       viewClub({ id });
@@ -647,8 +673,8 @@ async function viewSettings() {
 }
 
 function afterAuth() {
-  const next = sessionStorage.getItem('afterLogin');
-  sessionStorage.removeItem('afterLogin');
+  const next = store.get('afterLogin');
+  store.set('afterLogin', null);
   location.hash = next && !/^#\/(login|register)/.test(next) ? next : '#/';
 }
 
@@ -734,7 +760,11 @@ async function loadMe() {
   renderAccount();
 }
 
-window.addEventListener('hashchange', route);
-const [meta] = await Promise.all([api('/meta'), loadMe()]);
-state.meta = meta;
-route();
+async function boot() {
+  window.addEventListener('hashchange', route);
+  const [meta] = await Promise.all([api('/meta'), loadMe()]);
+  state.meta = meta;
+  await route();
+}
+
+boot();

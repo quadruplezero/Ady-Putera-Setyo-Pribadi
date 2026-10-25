@@ -1,0 +1,15 @@
+{
+  "name": "mainbareng",
+  "version": "0.1.0",
+  "description": "Aplikasi komunitas olahraga ala Reclub: cari sesi main bareng, gabung klub, catat skor, dan naik peringkat.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/**/*.test.js\""
+  }
+}

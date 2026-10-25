@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f766e" />
+    <meta name="description" content="Cari teman main, gabung klub olahraga, catat skor, dan naik peringkat." />
+    <title>MainBareng</title>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a href="#/" class="brand"><img src="/icon.svg" alt="" width="28" height="28" /> MainBareng</a>
+      <div id="account"></div>
+    </header>
+
+    <main id="app" class="container" aria-live="polite"></main>
+
+    <nav class="tabbar" aria-label="Navigasi utama">
+      <a href="#/" data-tab="discover"><span aria-hidden="true">🔍</span>Jelajah</a>
+      <a href="#/clubs" data-tab="clubs"><span aria-hidden="true">👥</span>Klub</a>
+      <a href="#/leaderboard" data-tab="leaderboard"><span aria-hidden="true">🏆</span>Peringkat</a>
+      <a href="#/me" data-tab="me"><span aria-hidden="true">📅</span>Jadwalku</a>
+    </nav>
+
+    <div id="toast" role="status" hidden></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

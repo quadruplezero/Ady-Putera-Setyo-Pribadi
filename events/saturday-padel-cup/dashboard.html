@@ -1,0 +1,592 @@
+<title>Saturday Padel Cup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: court-blue header with a 17-match progress strip → the active wave's three court boards → standings beside the full schedule */
+:root {
+  --bg: #eef2f7; --surface: #ffffff; --surface-2: #f5f7fb; --ink: #0f1b2d; --muted: #5b6b82; --line: #d6deea;
+  --court: #1c4d8f; --court-2: #173f75; --on-court: #ffffff; --on-court-muted: #c9d8ee;
+  --ball: #d4dc2e; --on-ball: #1b2410;
+  --live: #c8372a; --done: #2c7a4e; --gold: #a87a05; --silver: #66768c;
+  --f-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a111d; --surface: #111a2b; --surface-2: #0d1524; --ink: #e7edf6; --muted: #97a6bd; --line: #223049;
+    --court: #22528f; --court-2: #1b4477; --on-court: #ffffff; --on-court-muted: #bcd0ec;
+    --ball: #dfe54a; --on-ball: #1b2410;
+    --live: #ff6a55; --done: #4fc48a; --gold: #e3b54d; --silver: #a9b6c8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a111d; --surface: #111a2b; --surface-2: #0d1524; --ink: #e7edf6; --muted: #97a6bd; --line: #223049;
+  --court: #22528f; --court-2: #1b4477; --on-court: #ffffff; --on-court-muted: #bcd0ec;
+  --ball: #dfe54a; --on-ball: #1b2410;
+  --live: #ff6a55; --done: #4fc48a; --gold: #e3b54d; --silver: #a9b6c8;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.45; }
+button { font: inherit; color: inherit; }
+button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--ball); outline-offset: 2px; }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.inner { max-width: 1180px; margin: 0 auto; }
+
+/* Header band */
+.band { background: var(--court); color: var(--on-court); padding-block: 22px 20px; position: relative; overflow: hidden; }
+.band::after { content: ""; position: absolute; inset: 14px -40px auto auto; width: 260px; height: 150px; border: 2px solid rgba(255,255,255,.14); border-right: 0; pointer-events: none; }
+.band::before { content: ""; position: absolute; top: 14px; right: 90px; width: 2px; height: 150px; background: rgba(255,255,255,.14); pointer-events: none; }
+.head { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: flex-end; justify-content: space-between; position: relative; z-index: 1; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--on-court-muted); font-weight: 600; }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(34px, 6vw, 54px); line-height: .95; margin: 6px 0 0; letter-spacing: .01em; text-wrap: balance; }
+.head-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pill { display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 999px; background: rgba(255,255,255,.12); font-size: 13px; font-weight: 500; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--on-court-muted); flex: none; }
+.pill[data-sync="live"] .dot { background: var(--ball); box-shadow: 0 0 0 3px rgba(212,220,46,.25); }
+.pill[data-sync="error"] .dot, .pill[data-sync="slow"] .dot { background: #ff9a8b; }
+.btn-ghost { border: 1px solid rgba(255,255,255,.35); background: transparent; color: var(--on-court); border-radius: 999px; padding: 6px 13px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-ghost:hover { background: rgba(255,255,255,.12); }
+.btn-ghost[aria-pressed="true"] { background: var(--ball); color: var(--on-ball); border-color: var(--ball); }
+
+.progress { margin-top: 18px; position: relative; z-index: 1; }
+.progress-text { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; font-size: 14px; color: var(--on-court-muted); margin-bottom: 8px; }
+.progress-text strong { color: var(--on-court); font-weight: 600; }
+.strip { display: flex; gap: 10px; }
+.strip-wave { flex: var(--n) 1 0; display: flex; gap: 3px; min-width: 0; }
+.seg { flex: 1; height: 10px; border-radius: 2px; background: rgba(255,255,255,.16); }
+.seg[data-s="live"] { background: rgba(255,255,255,.55); animation: pulse 1.6s ease-in-out infinite; }
+.seg[data-s="done"] { background: var(--ball); }
+.strip-labels { display: flex; gap: 10px; margin-top: 5px; }
+.strip-labels span { flex: var(--n) 1 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--on-court-muted); }
+@keyframes pulse { 50% { opacity: .45; } }
+
+main { padding-block: 22px 56px; }
+main > .inner { display: grid; gap: 28px; }
+h2 { font-family: var(--f-display); font-size: 28px; font-weight: 700; margin: 0; line-height: 1; letter-spacing: .01em; text-wrap: balance; }
+.section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+/* Wave tabs */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 11px; cursor: pointer; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.tab[aria-pressed="true"] { background: var(--court); border-color: var(--court); color: var(--on-court); }
+.tab .tdot { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.tab[data-s="done"] .tdot { background: var(--done); }
+.tab[data-s="live"] .tdot { background: var(--live); }
+.tab[aria-pressed="true"] .tdot { box-shadow: 0 0 0 2px var(--on-court); }
+
+/* Court boards */
+.courts { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; }
+.court { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.court.is-empty { border-style: dashed; background: transparent; align-items: center; justify-content: center; min-height: 200px; color: var(--muted); padding: 20px; text-align: center; }
+.court-top { background: var(--court-2); color: var(--on-court); display: flex; align-items: center; gap: 10px; padding: 9px 14px; }
+.cname { font-family: var(--f-display); font-size: 20px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+.chip { font-size: 11px; font-weight: 700; letter-spacing: .08em; padding: 3px 7px; border-radius: 5px; border: 1px solid rgba(255,255,255,.4); }
+.mno { font-size: 12px; color: var(--on-court-muted); }
+.status { margin-left: auto; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px; color: var(--on-court-muted); }
+.court[data-s="live"] .status { color: var(--on-court); }
+.court[data-s="live"] .status .dot { background: #ff6a55; animation: pulse 1.2s ease-in-out infinite; }
+.court[data-s="done"] .status .dot { background: var(--ball); }
+
+.team { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 14px 14px 12px; }
+.team + .team { border-top: 1px solid var(--line); }
+.names { font-weight: 600; font-size: 18px; line-height: 1.2; overflow-wrap: anywhere; }
+.names .sep { color: var(--muted); font-weight: 400; padding: 0 2px; }
+.names .tag { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .04em; margin-left: 3px; }
+.pips { display: flex; gap: 5px; margin-top: 7px; }
+.pip { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid var(--line); background: transparent; transition: background .2s, border-color .2s; }
+.pip.on { background: var(--ball); border-color: color-mix(in srgb, var(--ball) 70%, #000); }
+.score { font-family: var(--f-display); font-weight: 700; font-size: 58px; line-height: .9; font-variant-numeric: tabular-nums; min-width: 1.1ch; text-align: right; grid-row: span 2; }
+.team.win .names { font-weight: 700; }
+.team.win .score { color: var(--ink); }
+.team.lose .names, .team.lose .score { color: var(--muted); }
+.ctrl { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 8px; }
+.ctrl button { flex: 1; min-height: 42px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface-2); font-size: 15px; font-weight: 700; cursor: pointer; }
+.ctrl button.plus { background: var(--court); border-color: var(--court); color: var(--on-court); }
+.ctrl button:disabled { opacity: .4; cursor: not-allowed; }
+.court-foot { margin-top: auto; padding: 10px 14px; border-top: 1px solid var(--line); background: var(--surface-2); font-size: 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; min-height: 46px; }
+.court-foot .earned { font-weight: 600; }
+.court-foot .earned b { background: var(--ball); color: var(--on-ball); padding: 1px 7px; border-radius: 5px; margin-left: 4px; }
+.court-foot .hint { color: var(--muted); }
+.link-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 5px 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.link-btn.go { background: var(--live); border-color: var(--live); color: #fff; }
+
+.next { margin-top: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 4px; }
+.next .lbl { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.next .who { font-weight: 600; }
+
+/* Lower grid */
+.lower { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 20px; align-items: start; }
+@media (max-width: 920px) { .lower { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; min-width: 0; }
+.podium { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.place { border-radius: 12px; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--line); min-width: 0; }
+.place .pl { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.place.p1 .pl { color: var(--gold); }
+.place.p2 .pl { color: var(--silver); }
+.place .pn { font-family: var(--f-display); font-size: 28px; font-weight: 700; line-height: 1.05; margin-top: 2px; overflow-wrap: anywhere; }
+.place .pp { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 15px; }
+th { text-align: right; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { text-align: right; padding: 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:nth-child(2), td:nth-child(2) { text-align: left; width: 100%; }
+th:first-child, td:first-child { text-align: left; padding-left: 0; }
+td:first-child { color: var(--muted); }
+td.pts { font-family: var(--f-display); font-size: 20px; font-weight: 700; }
+tr.top td.pts { color: var(--ink); }
+tr.top td:nth-child(2) { font-weight: 700; }
+.medal { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; }
+tr.r1 .medal { background: var(--gold); }
+tr.r2 .medal { background: var(--silver); }
+.playing { font-size: 11px; font-weight: 700; color: var(--live); letter-spacing: .06em; text-transform: uppercase; margin-left: 6px; }
+.rules { margin-top: 14px; font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
+.rules .scale { display: flex; flex-wrap: wrap; gap: 6px; }
+.rules .scale span { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tie-note { margin-top: 10px; font-size: 13px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--live); color: var(--ink); }
+
+.sched { display: grid; gap: 14px; }
+.sched-wave h3 { font-family: var(--f-display); font-size: 18px; font-weight: 700; margin: 0 0 6px; display: flex; gap: 8px; align-items: baseline; }
+.sched-wave h3 small { font-family: var(--f-body); font-size: 12px; color: var(--muted); font-weight: 500; }
+.row { display: grid; grid-template-columns: 34px 30px minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; width: 100%; background: none; text-align: left; }
+.row:hover { background: var(--surface-2); border-color: var(--line); }
+.row .rc { font-size: 12px; color: var(--muted); font-weight: 600; }
+.row .rt { font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; text-align: center; padding: 1px 0; }
+.row .ta { text-align: right; overflow-wrap: anywhere; }
+.row .tb { overflow-wrap: anywhere; }
+.row .w { font-weight: 700; }
+.row .rs { font-family: var(--f-display); font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; min-width: 52px; text-align: center; border-radius: 6px; padding: 0 6px; }
+.row[data-s="todo"] .rs { color: var(--muted); font-weight: 500; }
+.row[data-s="live"] .rs { color: #fff; background: var(--live); }
+.row[data-s="done"] .rs { background: var(--surface-2); }
+@media (max-width: 480px) {
+  .row { grid-template-columns: 26px minmax(0,1fr) auto minmax(0,1fr); }
+  .row .rt { display: none; }
+  .podium .pn { font-size: 24px; }
+}
+
+.foot-note { color: var(--muted); font-size: 13px; max-width: 70ch; }
+
+/* Screen (TV) mode */
+body.screen .ctrl, body.screen .op-only { display: none !important; }
+body.screen .score { font-size: 76px; }
+body.screen .names { font-size: 21px; }
+
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; font-weight: 500; max-width: calc(100% - 32px); z-index: 20; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<header class="band gutter">
+  <div class="inner">
+    <div class="head">
+      <div>
+        <div class="eyebrow">Sabtu, 31 Oktober 2026 · Road to 4 · 3 court</div>
+        <h1>Saturday Padel Cup</h1>
+      </div>
+      <div class="head-tools">
+        <span class="pill" id="sync" data-sync="connecting"><span class="dot"></span><span id="sync-text">Menghubungkan…</span></span>
+        <span class="pill" id="role" hidden></span>
+        <button class="btn-ghost" id="screen-btn" aria-pressed="false" type="button">Mode layar</button>
+      </div>
+    </div>
+    <div class="progress">
+      <div class="progress-text"><span id="prog-main"></span><span id="prog-side"></span></div>
+      <div class="strip" id="strip" aria-hidden="true"></div>
+      <div class="strip-labels" id="strip-labels" aria-hidden="true"></div>
+    </div>
+  </div>
+</header>
+
+<main class="gutter">
+  <div class="inner">
+    <section aria-labelledby="wave-title">
+      <div class="section-head">
+        <div>
+          <h2 id="wave-title">Gelombang 1</h2>
+          <div class="sub" id="wave-sub"></div>
+        </div>
+        <div class="tabs" id="tabs" aria-label="Pilih gelombang"></div>
+      </div>
+      <div class="courts" id="courts"></div>
+      <div class="next" id="next" hidden></div>
+    </section>
+
+    <div class="lower">
+      <section class="card" aria-labelledby="st-title">
+        <div class="section-head"><div><h2 id="st-title">Klasemen</h2><div class="sub">Poin individu · Ady dan Silvi dihitung satu slot</div></div></div>
+        <div class="podium" id="podium"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Pemain</th><th title="Pertandingan selesai dari 4">Main</th><th title="Menang">M</th><th title="Selisih game">+/−</th><th>Poin</th></tr></thead>
+            <tbody id="standings"></tbody>
+          </table>
+        </div>
+        <div id="tie"></div>
+        <div class="rules">
+          <div class="scale"><span>4–0 / 4–1 → 2 poin</span><span>4–2 → 3 poin</span><span>4–3 → 4 poin</span><span>Kalah → 0</span></div>
+          <div>Jika poin sama, urutan ditentukan menang terbanyak, lalu selisih game.</div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="sc-title">
+        <div class="section-head"><div><h2 id="sc-title">Jadwal lengkap</h2><div class="sub">17 pertandingan · setiap slot main 4 kali · klik untuk membuka gelombangnya</div></div></div>
+        <div class="sched" id="sched"></div>
+      </section>
+    </div>
+
+    <p class="foot-note">Gelombang berikutnya dimulai setelah pertandingan gelombang sebelumnya selesai. Tidak ada batas waktu per pertandingan, jadi selesai sebelum 08.00 adalah target, bukan jaminan.</p>
+  </div>
+</main>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+// [gelombang, court, jenis, tim A, tim B]
+const RAW = [
+  [1, 1, 'MD', ['Rizal', 'Yan'], ['Muzli', 'Indra']],
+  [1, 2, 'WD', ['Bubun', 'Niken'], ['Ayu', 'Jehan']],
+  [1, 3, 'MX', ['Tiya', 'Wulan'], ['Yudha', 'Nindy']],
+  [2, 1, 'WD', ['Tiya', 'Gina'], ['Wulan', 'Ami']],
+  [2, 2, 'WD', ['Niken', 'NJ'], ['Ayu', 'Nindy']],
+  [2, 3, 'MD', ['Rizal', 'Indra'], ['Yan', 'Zaki']],
+  [3, 1, 'MX', ['Yan', 'Tiya'], ['Indra', 'Ayu']],
+  [3, 2, 'MX', ['Yudha', 'Niken'], ['Muzli', 'Bubun']],
+  [3, 3, 'WD', ['Silvi', 'NJ'], ['Ami', 'Jehan']],
+  [4, 1, 'MD', ['Rizal', 'Yudha'], ['Muzli', 'Zaki']],
+  [4, 2, 'MX', ['Ady', 'Nindy'], ['Yan', 'NJ']],
+  [4, 3, 'WD', ['Bubun', 'Gina'], ['Wulan', 'Jehan']],
+  [5, 1, 'MX', ['Niken', 'Wulan'], ['Yudha', 'Ami']],
+  [5, 2, 'MD', ['Rizal', 'Muzli'], ['Zaki', 'Indra']],
+  [5, 3, 'WD', ['Silvi', 'Ayu'], ['Gina', 'NJ']],
+  [6, 1, 'MX', ['Ady', 'Tiya'], ['Nindy', 'Ami']],
+  [6, 2, 'MX', ['Bubun', 'Jehan'], ['Gina', 'Zaki']],
+];
+const MATCHES = RAW.map(([wave, court, type, a, b], i) => ({ id: 'm' + String(i + 1).padStart(2, '0'), no: i + 1, wave, court, type, a, b }));
+const WAVES = [...new Set(MATCHES.map(m => m.wave))];
+const SLOTS = ['Ady/Silvi', 'Tiya', 'Yan', 'Rizal', 'Bubun', 'Yudha', 'Niken', 'Ayu', 'Muzli', 'Nindy', 'Indra', 'Wulan', 'Gina', 'NJ', 'Ami', 'Jehan', 'Zaki'];
+const TYPE_NAME = { MD: "Men's Double", WD: "Women's Double", MX: 'Mix' };
+const COURTS = 3, TARGET = 4, LOCAL_KEY = 'spc2026-scores';
+const slotOf = n => (n === 'Ady' || n === 'Silvi') ? 'Ady/Silvi' : n;
+
+let scores = {};
+let mode = 'connecting';
+let canWrite = false;
+let screenMode = false;
+let pickedWave = null;
+let db = null;
+const writing = {}, dirty = {};
+
+const $ = id => document.getElementById(id);
+const st = id => scores[id] || { a: 0, b: 0, started: false };
+const statusOf = s => (s.a >= TARGET || s.b >= TARGET) ? 'done' : (s.started || s.a + s.b > 0) ? 'live' : 'todo';
+const mStatus = m => statusOf(st(m.id));
+
+function pointsFor(loserGames) { return loserGames <= 1 ? 2 : loserGames === 2 ? 3 : 4; }
+function result(m) {
+  const s = st(m.id);
+  if (statusOf(s) !== 'done') return null;
+  const winner = s.a >= TARGET ? 'a' : 'b';
+  return { winner, pts: pointsFor(winner === 'a' ? s.b : s.a) };
+}
+
+function standings() {
+  const t = Object.fromEntries(SLOTS.map(n => [n, { name: n, played: 0, wins: 0, gf: 0, ga: 0, pts: 0, live: false }]));
+  for (const m of MATCHES) {
+    const s = st(m.id), status = statusOf(s), r = result(m);
+    for (const side of ['a', 'b']) for (const p of m[side]) {
+      const row = t[slotOf(p)];
+      if (status === 'live') row.live = true;
+      if (status !== 'done') continue;
+      row.played++;
+      row.gf += s[side];
+      row.ga += s[side === 'a' ? 'b' : 'a'];
+      if (r.winner === side) { row.wins++; row.pts += r.pts; }
+    }
+  }
+  const rows = Object.values(t).map(r => ({ ...r, diff: r.gf - r.ga }));
+  rows.sort((x, y) => y.pts - x.pts || y.wins - x.wins || y.diff - x.diff || x.name.localeCompare(y.name));
+  rows.forEach((r, i) => {
+    const p = rows[i - 1];
+    r.rank = p && p.pts === r.pts && p.wins === r.wins && p.diff === r.diff ? p.rank : i + 1;
+  });
+  return rows;
+}
+
+const activeWave = () => WAVES.find(w => MATCHES.some(m => m.wave === w && mStatus(m) !== 'done')) ?? null;
+const waveStatus = w => {
+  const ms = MATCHES.filter(m => m.wave === w).map(mStatus);
+  return ms.every(s => s === 'done') ? 'done' : ms.some(s => s !== 'todo') ? 'live' : 'todo';
+};
+
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function teamNames(team) {
+  return team.map(p => esc(p) + (p === 'Ady' || p === 'Silvi' ? '<span class="tag">A/S</span>' : '')).join('<span class="sep"> / </span>');
+}
+const plain = team => team.join(' & ');
+
+function renderHeader() {
+  const done = MATCHES.filter(m => mStatus(m) === 'done').length;
+  const aw = activeWave();
+  $('prog-main').innerHTML = `<strong>${done} dari ${MATCHES.length}</strong> pertandingan selesai`;
+  $('prog-side').textContent = aw === null ? 'Semua pertandingan selesai' : `Gelombang ${aw} dari ${WAVES.length} ${waveStatus(aw) === 'live' ? 'sedang main' : 'siap dimulai'}`;
+  $('strip').innerHTML = WAVES.map(w => {
+    const ms = MATCHES.filter(m => m.wave === w);
+    return `<div class="strip-wave" style="--n:${ms.length}">${ms.map(m => `<div class="seg" data-s="${mStatus(m)}"></div>`).join('')}</div>`;
+  }).join('');
+  $('strip-labels').innerHTML = WAVES.map(w => `<span style="--n:${MATCHES.filter(m => m.wave === w).length}">G${w}</span>`).join('');
+
+  const sync = {
+    connecting: 'Menghubungkan…',
+    live: 'Skor live',
+    slow: 'Belum tersambung · skor mungkin belum terbaru',
+    local: 'Mode lokal · hanya di perangkat ini',
+    signedout: 'Masuk ke claude.ai untuk melihat skor live',
+    error: 'Koneksi terputus · muat ulang halaman',
+  };
+  $('sync').dataset.sync = mode;
+  $('sync-text').textContent = sync[mode];
+  const role = $('role');
+  role.hidden = mode === 'connecting' || mode === 'signedout';
+  role.textContent = canWrite ? 'Panitia · bisa input skor' : 'Penonton';
+  $('screen-btn').setAttribute('aria-pressed', String(screenMode));
+}
+
+function renderTabs(shown) {
+  const aw = activeWave();
+  $('tabs').innerHTML = WAVES.map(w =>
+    `<button type="button" class="tab" data-wave="${w}" data-s="${waveStatus(w)}" aria-pressed="${w === shown}" aria-label="Gelombang ${w}"><span class="tdot"></span>G${w}${w === aw ? ' · aktif' : ''}</button>`
+  ).join('');
+}
+
+function courtCard(m) {
+  const s = st(m.id), status = statusOf(s), r = result(m);
+  const showCtrl = canWrite && !screenMode;
+  const statusLabel = { todo: 'Belum mulai', live: 'Live', done: 'Selesai' }[status];
+  const team = side => {
+    const g = s[side], other = s[side === 'a' ? 'b' : 'a'];
+    const cls = r ? (r.winner === side ? 'win' : 'lose') : '';
+    const pips = Array.from({ length: TARGET }, (_, i) => `<span class="pip${i < g ? ' on' : ''}"></span>`).join('');
+    const ctrl = showCtrl ? `<div class="ctrl">
+        <button type="button" data-act="dec" data-id="${m.id}" data-side="${side}" ${g === 0 ? 'disabled' : ''} aria-label="Kurangi game ${esc(plain(m[side]))}">− 1</button>
+        <button type="button" class="plus" data-act="inc" data-id="${m.id}" data-side="${side}" ${g >= TARGET || other >= TARGET && g >= TARGET - 1 ? 'disabled' : ''} aria-label="Tambah game ${esc(plain(m[side]))}">+ 1 game</button>
+      </div>` : '';
+    return `<div class="team ${cls}">
+      <div><div class="names">${teamNames(m[side])}</div><div class="pips" aria-label="${g} dari ${TARGET} game">${pips}</div></div>
+      <div class="score" aria-label="${g} game">${g}</div>${ctrl}
+    </div>`;
+  };
+  let foot;
+  if (r) foot = `<span class="earned">${esc(plain(m[r.winner]))} <b>+${r.pts} poin</b></span><span class="hint">${s.a}–${s.b}</span>`;
+  else if (status === 'live') foot = `<span class="hint">Pertama ke 4 game menang</span>`;
+  else foot = `<span class="hint">${TYPE_NAME[m.type]}</span>${showCtrl ? `<button type="button" class="link-btn go op-only" data-act="start" data-id="${m.id}">Mulai</button>` : ''}`;
+  if (status === 'live' && showCtrl && s.a + s.b === 0) foot += `<button type="button" class="link-btn op-only" data-act="unstart" data-id="${m.id}">Batal mulai</button>`;
+  return `<article class="court" data-s="${status}" aria-label="Court ${m.court}, pertandingan ${m.no}">
+    <div class="court-top"><span class="cname">Court ${m.court}</span><span class="chip" title="${TYPE_NAME[m.type]}">${m.type}</span><span class="mno">#${m.no}</span><span class="status"><span class="dot"></span>${statusLabel}</span></div>
+    ${team('a')}${team('b')}
+    <div class="court-foot">${foot}</div>
+  </article>`;
+}
+
+function renderCourts(shown) {
+  const ms = MATCHES.filter(m => m.wave === shown);
+  const aw = activeWave();
+  $('wave-title').textContent = `Gelombang ${shown}`;
+  const ws = waveStatus(shown);
+  $('wave-sub').textContent = shown === aw
+    ? (ws === 'live' ? 'Sedang dimainkan' : 'Berikutnya di lapangan')
+    : ws === 'done' ? 'Sudah selesai' : (aw !== null && shown > aw ? `Menunggu gelombang ${aw} selesai` : 'Belum dimainkan');
+  let html = ms.map(courtCard).join('');
+  for (let c = ms.length + 1; c <= COURTS; c++) html += `<div class="court is-empty">Court ${c} kosong di gelombang ini</div>`;
+  $('courts').innerHTML = html;
+
+  const nextWave = WAVES.find(w => w > shown);
+  const next = $('next');
+  if (nextWave && waveStatus(nextWave) === 'todo') {
+    const players = MATCHES.filter(m => m.wave === nextWave).flatMap(m => [...m.a, ...m.b]);
+    const playing = new Set(ms.flatMap(m => [...m.a, ...m.b]).map(slotOf));
+    const resting = SLOTS.filter(n => !playing.has(n));
+    next.hidden = false;
+    next.innerHTML = `<div class="lbl">Bersiap untuk gelombang ${nextWave}</div><div class="who">${players.map(esc).join(', ')}</div>` +
+      (resting.length ? `<div class="sub">Istirahat di gelombang ${shown}: ${resting.map(esc).join(', ')}</div>` : '');
+  } else next.hidden = true;
+}
+
+function renderStandings() {
+  const rows = standings();
+  const allDone = MATCHES.every(m => mStatus(m) === 'done');
+  const anyDone = MATCHES.some(m => mStatus(m) === 'done');
+  const label = n => allDone ? `Juara ${n}` : `Juara ${n} sementara`;
+  const place = (r, n) => `<div class="place p${n}"><div class="pl">${label(n)}</div><div class="pn">${anyDone ? esc(r.name) : '—'}</div><div class="pp">${anyDone ? `${r.pts} poin · ${r.wins} menang · ${r.played}/4 main` : 'Menunggu hasil pertama'}</div></div>`;
+  $('podium').innerHTML = place(rows[0], 1) + place(rows[1], 2);
+  $('standings').innerHTML = rows.map((r, i) => {
+    const top = anyDone && i < 2;
+    return `<tr class="${top ? `top r${i + 1}` : ''}">
+      <td>${r.rank}</td>
+      <td>${top ? '<span class="medal"></span>' : ''}${esc(r.name)}${r.live ? '<span class="playing">main</span>' : ''}</td>
+      <td>${r.played}/4</td><td>${r.wins}</td><td>${r.diff > 0 ? '+' : ''}${r.diff}</td><td class="pts">${r.pts}</td>
+    </tr>`;
+  }).join('');
+  const tie = $('tie');
+  const cut = rows[1], below = rows[2];
+  if (anyDone && (rows[0].rank === cut.rank || cut.rank === below.rank)) {
+    tie.innerHTML = `<div class="tie-note">${allDone ? 'Perebutan juara masih sama kuat (poin, menang, dan selisih game sama). Panitia perlu menentukan pemenangnya.' : 'Posisi juara saat ini masih sama kuat dengan pemain di bawahnya.'}</div>`;
+  } else tie.innerHTML = '';
+}
+
+function renderSchedule() {
+  $('sched').innerHTML = WAVES.map(w => {
+    const ms = MATCHES.filter(m => m.wave === w);
+    const ws = waveStatus(w);
+    return `<div class="sched-wave"><h3>Gelombang ${w}<small>${{ todo: 'belum mulai', live: 'berlangsung', done: 'selesai' }[ws]}</small></h3>` +
+      ms.map(m => {
+        const s = st(m.id), status = statusOf(s), r = result(m);
+        const score = status === 'todo' ? 'vs' : `${s.a}–${s.b}`;
+        return `<button type="button" class="row" data-s="${status}" data-wave="${w}" aria-label="Court ${m.court}: ${esc(plain(m.a))} lawan ${esc(plain(m.b))}, ${status === 'todo' ? 'belum mulai' : score}">
+          <span class="rc">C${m.court}</span><span class="rt">${m.type}</span>
+          <span class="ta ${r && r.winner === 'a' ? 'w' : ''}">${esc(m.a.join('/'))}</span>
+          <span class="rs">${score}</span>
+          <span class="tb ${r && r.winner === 'b' ? 'w' : ''}">${esc(m.b.join('/'))}</span>
+        </button>`;
+      }).join('') + '</div>';
+  }).join('');
+}
+
+function render() {
+  const shown = pickedWave ?? activeWave() ?? WAVES[WAVES.length - 1];
+  renderHeader();
+  renderTabs(shown);
+  renderCourts(shown);
+  renderStandings();
+  renderSchedule();
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+}
+
+function loadLocal() {
+  try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}') || {}; } catch { return {}; }
+}
+function saveLocal() {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(scores)); } catch { toast('Browser ini tidak bisa menyimpan skor.'); }
+}
+
+function clean(v) {
+  const n = x => Math.max(0, Math.min(TARGET, Math.floor(Number(x) || 0)));
+  const s = { a: n(v && v.a), b: n(v && v.b), started: !!(v && v.started) };
+  if (s.a >= TARGET && s.b >= TARGET) s.b = TARGET - 1;
+  return s;
+}
+
+async function persist(id) {
+  if (mode === 'local') { saveLocal(); return; }
+  if (!db) return;
+  if (writing[id]) { dirty[id] = true; return; }
+  writing[id] = true;
+  try {
+    do {
+      dirty[id] = false;
+      await db.doc('matches/' + id).set({ ...st(id), updatedAt: Date.now() });
+    } while (dirty[id]);
+  } catch (e) {
+    if (e && (e.code === 'invalid_argument' || e.code === 'not_granted' || e.code === 'revoked')) {
+      canWrite = false;
+      toast('Akun ini hanya bisa melihat skor. Minta akses Contributor ke panitia.');
+    } else {
+      toast('Skor belum tersimpan. Periksa koneksi lalu coba lagi.');
+    }
+  } finally {
+    writing[id] = false;
+    render();
+  }
+}
+
+function change(id, fn) {
+  if (!canWrite) return;
+  const s = { ...st(id) };
+  fn(s);
+  const next = clean(s);
+  const cur = st(id);
+  if (next.a === cur.a && next.b === cur.b && next.started === cur.started) return;
+  if (next.a >= TARGET && cur.b >= TARGET || next.b >= TARGET && cur.a >= TARGET) return;
+  scores = { ...scores, [id]: next };
+  if (statusOf(next) === 'done' && statusOf(cur) !== 'done') {
+    const m = MATCHES.find(x => x.id === id), r = result(m);
+    toast(`Court ${m.court} selesai: ${plain(m[r.winner])} +${r.pts} poin`);
+  }
+  render();
+  persist(id);
+}
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act], .tab, .row');
+  if (!el) return;
+  if (el.classList.contains('tab')) {
+    const w = Number(el.dataset.wave);
+    pickedWave = w === activeWave() ? null : w;
+    render();
+    return;
+  }
+  if (el.classList.contains('row')) {
+    const w = Number(el.dataset.wave);
+    pickedWave = w === activeWave() ? null : w;
+    render();
+    document.querySelector('main').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  const { act, id, side } = el.dataset;
+  if (act === 'inc') change(id, s => { s[side]++; s.started = true; });
+  if (act === 'dec') change(id, s => { s[side]--; });
+  if (act === 'start') change(id, s => { s.started = true; });
+  if (act === 'unstart') change(id, s => { s.started = false; });
+});
+
+let wakeLock = null;
+$('screen-btn').addEventListener('click', async () => {
+  screenMode = !screenMode;
+  document.body.classList.toggle('screen', screenMode);
+  render();
+  try {
+    if (screenMode && navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen');
+    else if (!screenMode && wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch { /* layar tetap bisa mati; tidak masalah */ }
+});
+
+async function boot() {
+  render();
+  const inViewer = !!(window.claude && typeof window.claude.use === 'function');
+  if (!inViewer) {
+    mode = 'local';
+    canWrite = true;
+    scores = Object.fromEntries(Object.entries(loadLocal()).map(([k, v]) => [k, clean(v)]));
+    render();
+    return;
+  }
+  const [dbNs, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+  if (!dbNs) { mode = 'signedout'; canWrite = false; render(); return; }
+  db = dbNs;
+  const w = user ? await user.can('data.write') : null;
+  canWrite = w !== false;
+  let fresh = false;
+  const timer = setTimeout(() => { if (!fresh) { mode = 'slow'; render(); } }, 10000);
+  db.collection('matches').onSnapshot(snap => {
+    const next = {};
+    snap.docs.forEach(d => { if (d.exists) next[d.id] = clean(d.data()); });
+    for (const id in writing) if (writing[id] && scores[id]) next[id] = scores[id];
+    scores = next;
+    if (!snap.metadata.fromCache) { fresh = true; clearTimeout(timer); mode = 'live'; }
+    render();
+  }, () => {
+    clearTimeout(timer);
+    mode = 'error';
+    render();
+  });
+}
+boot();
+</script>
